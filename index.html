@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>QR-Secure | QR Code Security Analyzer</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <nav class="nav">
+    <a class="logo" href="{{ url_for('index') }}">🛡️ QR-Secure</a>
+    <div>
+      <a href="{{ url_for('index') }}">Home</a>
+      <a href="{{ url_for('history') }}">Dashboard &amp; History</a>
+    </div>
+  </nav>
+
+  <main class="container">
+    <section class="hero fade-in">
+      <h1>QR-<span class="accent">Secure</span></h1>
+      <p>Scan or upload a QR code and find out if it is <b>Safe</b>, <b>Suspicious</b> or <b>Dangerous</b>
+         <i>before</i> you open it. The link is only analyzed as text &mdash; it is never opened.</p>
+    </section>
+
+    {% if error %}
+    <div class="alert error fade-in">⚠️ {{ error }}</div>
+    {% endif %}
+
+    <section class="grid two">
+      <div class="card fade-in">
+        <h2>📤 Upload QR Code</h2>
+        <form id="uploadForm" action="{{ url_for('analyze') }}" method="post" enctype="multipart/form-data">
+          <label class="dropzone" id="dropzone" for="qrFile">
+            <span id="fileLabel">Click or drag a PNG / JPG / JPEG image here</span>
+            <img id="preview" alt="Preview" hidden>
+          </label>
+          <input type="file" id="qrFile" name="qr_image" accept=".png,.jpg,.jpeg,image/png,image/jpeg" hidden>
+          <button type="submit" class="btn">Upload QR Code &amp; Analyze</button>
+        </form>
+      </div>
+
+      <div class="card fade-in">
+        <h2>📷 Scan QR Code</h2>
+        <p class="muted">Use your webcam. Hold the QR code in front of the camera, then press Capture.</p>
+        <video id="video" autoplay playsinline hidden></video>
+        <p id="cameraMsg" class="muted"></p>
+        <button type="button" class="btn secondary" id="startCam">Start Camera</button>
+        <button type="button" class="btn" id="captureBtn" hidden>Capture &amp; Analyze</button>
+        <canvas id="canvas" hidden></canvas>
+      </div>
+    </section>
+
+    <section class="grid three fade-in">
+      <div class="card small"><h3>1. Decode</h3><p class="muted">OpenCV + pyzbar read the QR image.</p></div>
+      <div class="card small"><h3>2. Analyze</h3><p class="muted">HTTPS, shorteners, IPs, keywords and domain tricks are checked.</p></div>
+      <div class="card small"><h3>3. Report</h3><p class="muted">You get a risk score and clear advice.</p></div>
+    </section>
+
+    <p class="disclaimer">The score is a <b>heuristic</b> (rule-based estimate). It is not a guarantee that a website is safe.</p>
+  </main>
+  <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>
