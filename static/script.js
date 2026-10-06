@@ -2,13 +2,19 @@ const fileInput = document.getElementById("qrFile");
 const preview = document.getElementById("preview");
 const fileLabel = document.getElementById("fileLabel");
 
+
+// =========================
+// IMAGE UPLOAD PREVIEW
+// =========================
+
 if (fileInput) {
     fileInput.addEventListener("change", function () {
         const file = this.files[0];
 
         if (!file) {
             preview.hidden = true;
-            fileLabel.textContent = "Click or drag a PNG / JPG / JPEG image here";
+            fileLabel.textContent =
+                "Click or drag a PNG / JPG / JPEG image here";
             return;
         }
 
@@ -31,7 +37,10 @@ if (fileInput) {
 }
 
 
-// Camera
+// =========================
+// CAMERA
+// =========================
+
 const startCam = document.getElementById("startCam");
 const captureBtn = document.getElementById("captureBtn");
 const video = document.getElementById("video");
@@ -40,19 +49,47 @@ const cameraMsg = document.getElementById("cameraMsg");
 
 let stream = null;
 
+
+// START CAMERA
 if (startCam) {
     startCam.addEventListener("click", async function () {
+
         try {
+
+            if (!navigator.mediaDevices ||
+                !navigator.mediaDevices.getUserMedia) {
+
+                cameraMsg.textContent =
+                    "Camera is not supported by this browser.";
+
+                return;
+            }
+
+            cameraMsg.textContent = "Starting camera...";
+
             stream = await navigator.mediaDevices.getUserMedia({
-                video: { facingMode: "environment" },
+                video: {
+                    facingMode: {
+                        ideal: "environment"
+                    }
+                },
                 audio: false
             });
 
             video.srcObject = stream;
+
             video.hidden = false;
             captureBtn.hidden = false;
-            cameraMsg.textContent = "Camera started. Hold the QR code in front of the camera.";
+
+            await video.play();
+
+            cameraMsg.textContent =
+                "Camera ready. Place the QR code in front of the camera.";
+
         } catch (error) {
+
+            console.error("Camera error:", error);
+
             cameraMsg.textContent =
                 "Camera permission was denied or camera is unavailable.";
         }
@@ -60,40 +97,99 @@ if (startCam) {
 }
 
 
+// CAPTURE QR
 if (captureBtn) {
+
     captureBtn.addEventListener("click", function () {
-        if (!video.videoWidth || !video.videoHeight) {
-            cameraMsg.textContent = "Camera is not ready yet.";
+
+        if (!stream) {
+            cameraMsg.textContent =
+                "Please start the camera first.";
             return;
         }
+
+        if (!video.videoWidth || !video.videoHeight) {
+
+            cameraMsg.textContent =
+                "Camera is not ready yet. Please wait a moment.";
+
+            return;
+        }
+
+        cameraMsg.textContent =
+            "Capturing QR code...";
 
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
 
         const context = canvas.getContext("2d");
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-        canvas.toBlob(function (blob) {
+        context.drawImage(
+            video,
+            0,
+            0,
+            canvas.width,
+            canvas.height
+        );
+
+        canvas.toBlob(async function (blob) {
+
+            if (!blob) {
+
+                cameraMsg.textContent =
+                    "Could not capture the image.";
+
+                return;
+            }
+
+            cameraMsg.textContent =
+                "Analyzing QR code...";
+
             const formData = new FormData();
-            formData.append("qr_image", blob, "camera_qr.png");
 
-            cameraMsg.textContent = "Analyzing QR code...";
+            formData.append(
+                "qr_image",
+                blob,
+                "camera_qr.png"
+            );
 
-            fetch("/analyze", {
-                method: "POST",
-                body: formData
-            })
-            .then(function (response) {
-                return response.text();
-            })
-            .then(function (html) {
+            try {
+
+                const response = await fetch(
+                    "/analyze",
+                    {
+                        method: "POST",
+                        body: formData
+                    }
+                );
+
+                if (!response.ok) {
+                    throw new Error(
+                        "Server returned " + response.status
+                    );
+                }
+
+                const html = await response.text();
+
+                // Stop camera
+                if (stream) {
+                    stream.getTracks().forEach(
+                        track => track.stop()
+                    );
+                }
+
                 document.open();
                 document.write(html);
                 document.close();
-            })
-            .catch(function () {
-                cameraMsg.textContent = "Something went wrong. Please try again.";
-            });
+
+            } catch (error) {
+
+                console.error("Capture error:", error);
+
+                cameraMsg.textContent =
+                    "Analysis failed. Please try again.";
+            }
+
         }, "image/png");
     });
 }
