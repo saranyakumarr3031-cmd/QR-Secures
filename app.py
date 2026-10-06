@@ -326,6 +326,7 @@ def init_db():
                 result TEXT NOT NULL
             )"""
         )
+init_db()
 
 
 def save_history(report):
